@@ -1,0 +1,9 @@
+[package]
+name = "hust-network-login"
+version = "0.1.0"
+authors = ["black-binary <blackbinary@qq.com>"]
+edition = "2018"
+
+[dependencies]
+minreq = {version = "2.2", features = []}
+urlencoding = "1.1"
