@@ -7,3 +7,9 @@ edition = "2018"
 [dependencies]
 minreq = {version = "2.2", features = []}
 urlencoding = "1.1"
+
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1
+panic = 'abort'
