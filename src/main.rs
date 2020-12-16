@@ -2,9 +2,19 @@ use std::fs;
 use std::time::Duration;
 use std::{io, thread};
 
+fn extract<'a>(text: &'a str, prefix: &'a str, suffix: &'a str) -> io::Result<&'a str> {
+    let left = text.find(prefix);
+    let right = text.find(suffix);
+    if left.is_none() || right.is_none() || left.unwrap() + prefix.len() >= right.unwrap() {
+        Err(io::ErrorKind::InvalidData.into())
+    } else {
+        Ok(&text[left.unwrap() + prefix.len()..right.unwrap()])
+    }
+}
+
 fn login(username: &str, password: &str) -> io::Result<()> {
     let resp = minreq::get("http://www.baidu.com")
-        .with_timeout(30)
+        .with_timeout(10)
         .send()
         .map_err(|e| {
             println!("baidu boom! {}", e);
@@ -14,23 +24,25 @@ fn login(username: &str, password: &str) -> io::Result<()> {
         println!("invalid resp format {}", e);
         io::ErrorKind::InvalidData
     })?;
-    let begin_str = "<script>top.self.location.href='http://192.168.50.3:8080/eportal/index.jsp?";
-    let end_str = "'</script>\r\n";
 
-    let query_string = resp.strip_prefix(begin_str);
-    if query_string.is_none() {
-        println!("login ok");
+    if resp.find("/eportal/index.jsp").is_none()
+        && resp
+            .find("<script>top.self.location.href='http://")
+            .is_none()
+    {
         return Ok(());
     }
-    let query_string = query_string.unwrap();
-    let query_string = query_string.strip_suffix(end_str);
-    if query_string.is_none() {
-        println!("wtf?");
-        return Err(io::ErrorKind::InvalidData.into());
-    }
 
-    let query_string = query_string.unwrap();
+    let portal_ip = extract(
+        resp,
+        "<script>top.self.location.href='http://",
+        "/eportal/index.jsp",
+    )?;
+    println!("portal ip: {}", portal_ip);
+
+    let query_string = extract(resp, "/eportal/index.jsp?", "'</script>\r\n")?;
     println!("query_string: {}", query_string);
+
     let query_string = urlencoding::encode(&query_string);
 
     let body = format!(
@@ -38,7 +50,9 @@ fn login(username: &str, password: &str) -> io::Result<()> {
         username, password, query_string
     );
 
-    let resp = minreq::post("http://192.168.50.3:8080/eportal/InterFace.do?method=login")
+    let login_url = format!("http://{}/eportal/InterFace.do?method=login", portal_ip);
+
+    let resp = minreq::post(login_url)
         .with_body(body)
         .with_header(
             "Content-Type",
@@ -46,6 +60,7 @@ fn login(username: &str, password: &str) -> io::Result<()> {
         )
         .with_header("Accept", "*/*")
         .with_header("User-Agent", "hust-network-login")
+        .with_timeout(10)
         .send()
         .map_err(|e| {
             println!("portal boom! {}", e);
@@ -64,6 +79,11 @@ fn login(username: &str, password: &str) -> io::Result<()> {
     } else {
         Err(io::ErrorKind::PermissionDenied.into())
     }
+}
+
+#[test]
+fn login_test() {
+    let _ = login("username", "password");
 }
 
 fn main() {
