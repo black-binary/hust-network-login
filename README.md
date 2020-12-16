@@ -36,7 +36,7 @@ strip ./target/release/hust-network-login
 
 strip 可以去除调试符号表，将体积减少到 500k 以下。
 
-交叉编译推荐使用 `cross`，当然你也可以自己手动配置工具链
+交叉编译推荐使用 `cross`，当然你也可以自己手动配置工具链。
 
 ```shell
 cargo install cross
