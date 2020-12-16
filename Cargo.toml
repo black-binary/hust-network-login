@@ -1,6 +1,6 @@
 [package]
 name = "hust-network-login"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["black-binary <blackbinary@qq.com>"]
 edition = "2018"
 
@@ -9,7 +9,7 @@ minreq = {version = "2.2", features = []}
 urlencoding = "1.1"
 
 [profile.release]
-lto = true
+lto = "fat"
 opt-level = 'z'
 codegen-units = 1
 panic = 'abort'
