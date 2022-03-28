@@ -1,3 +1,4 @@
 *.conf
 /target
 *.zip
+.vscode

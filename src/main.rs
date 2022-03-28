@@ -5,11 +5,12 @@ use std::{io, thread};
 fn extract<'a>(text: &'a str, prefix: &'a str, suffix: &'a str) -> io::Result<&'a str> {
     let left = text.find(prefix);
     let right = text.find(suffix);
-    if left.is_none() || right.is_none() || left.unwrap() + prefix.len() >= right.unwrap() {
-        Err(io::ErrorKind::InvalidData.into())
-    } else {
-        Ok(&text[left.unwrap() + prefix.len()..right.unwrap()])
+    if let (Some(l), Some(r)) = (left, right) {
+        if l + prefix.len() < r {
+            return Ok(&text[l + prefix.len()..r]);
+        }
     }
+    Err(io::ErrorKind::InvalidData.into())
 }
 
 fn login(username: &str, password: &str) -> io::Result<()> {
@@ -25,10 +26,8 @@ fn login(username: &str, password: &str) -> io::Result<()> {
         io::ErrorKind::InvalidData
     })?;
 
-    if resp.find("/eportal/index.jsp").is_none()
-        && resp
-            .find("<script>top.self.location.href='http://")
-            .is_none()
+    if !resp.contains("/eportal/index.jsp")
+        && !resp.contains("<script>top.self.location.href='http://")
     {
         return Ok(());
     }
@@ -43,7 +42,7 @@ fn login(username: &str, password: &str) -> io::Result<()> {
     let query_string = extract(resp, "/eportal/index.jsp?", "'</script>\r\n")?;
     println!("query_string: {}", query_string);
 
-    let query_string = urlencoding::encode(&query_string);
+    let query_string = urlencoding::encode(query_string);
 
     let body = format!(
         "userId={}&password={}&service=&queryString={}&passwordEncrypt=false",
@@ -74,7 +73,7 @@ fn login(username: &str, password: &str) -> io::Result<()> {
 
     println!("login resp: {}", resp);
 
-    if resp.find("success").is_some() {
+    if resp.contains("success") {
         Ok(())
     } else {
         Err(io::ErrorKind::PermissionDenied.into())

@@ -1,0 +1,5 @@
+[target.arm-unknown-linux-musleabi]
+image = "rustembedded/cross:arm-unknown-linux-musleabi"
+
+[target.aarch64-unknown-linux-musl]
+image = "rustembedded/cross:aarch64-unknown-linux-musl"
