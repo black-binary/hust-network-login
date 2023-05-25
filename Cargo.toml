@@ -1,6 +1,6 @@
 [package]
 name = "hust-network-login"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["black-binary <blackbinary@qq.com>"]
 edition = "2021"
 
