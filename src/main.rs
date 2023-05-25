@@ -1,3 +1,4 @@
+mod encrypt;
 use std::fs;
 use std::time::Duration;
 use std::{io, thread};
@@ -39,14 +40,19 @@ fn login(username: &str, password: &str) -> io::Result<()> {
     )?;
     println!("portal ip: {}", portal_ip);
 
+    let mac = extract(resp, "mac=", "&t=")?;
+    println!("mac: {}", mac);
+
+    let encrypt_pass = encrypt::encrypt_pass(format!("{}>{}", password, mac));
+
     let query_string = extract(resp, "/eportal/index.jsp?", "'</script>\r\n")?;
     println!("query_string: {}", query_string);
 
     let query_string = urlencoding::encode(query_string);
 
     let body = format!(
-        "userId={}&password={}&service=&queryString={}&passwordEncrypt=false",
-        username, password, query_string
+        "userId={}&password={}&service=&queryString={}&passwordEncrypt=true",
+        username, encrypt_pass, query_string
     );
 
     let login_url = format!("http://{}/eportal/InterFace.do?method=login", portal_ip);
