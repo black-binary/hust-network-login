@@ -4,7 +4,7 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - "v*"
-      
+      - "test-release"      
 env:
   GITHUB_TOKEN: ${{ github.token }}
   RUST_BACKTRACE: 1
