@@ -1,0 +1,14 @@
+[Unit]
+Description=Login to HUST_WIRELESS
+Before=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+DynamicUser=yes
+ExecStart=/usr/bin/hust-network-login %f
+
+[Install]
+WantedBy=multi-user.target
