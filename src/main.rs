@@ -91,18 +91,92 @@ fn login_test() {
     let _ = login("username", "password");
 }
 
-fn main() {
-    let args = std::env::args();
-    if args.len() <= 1 {
-        panic!("give me your config filename, you idiot")
+struct Config {
+    username: String,
+    password: String,
+}
+
+impl Config {
+    fn validate_and_assemble(
+        username: Option<&str>,
+        password: Option<&str>,
+    ) -> Result<Self, &'static str> {
+        match (username, password) {
+            (Some(_), None) => Err("missing password"),
+            (None, Some(_)) => Err("missing username"),
+            (None, None) => Err("missing username and password"),
+            (Some(username), Some(password)) => Ok(Self {
+                username: username.to_owned(),
+                password: password.to_owned(),
+            }),
+        }
     }
-    let path = args.last().unwrap();
-    let s = String::from_utf8(fs::read(&path).unwrap()).unwrap();
-    let mut lines = s.lines();
-    let username = lines.next().unwrap().to_owned();
-    let password = lines.next().unwrap().to_owned();
+
+    pub fn from_env() -> Option<Self> {
+        println!("reading configuration from environment variables");
+        let username = std::env::var("HUST_NETWORK_LOGIN_USERNAME")
+            .inspect_err(|err| println!("failed to read environment variable: {err}"))
+            .ok();
+        let password = std::env::var("HUST_NETWORK_LOGIN_PASSWORD")
+            .inspect_err(|err| println!("failed to read environment variable: {err}"))
+            .ok();
+
+        let result = Self::validate_and_assemble(
+            username.as_ref().map(String::as_str),
+            password.as_ref().map(String::as_str),
+        )
+        .inspect_err(|err| println!("invalid configuration: {err}"))
+        .ok()?;
+
+        Some(result)
+    }
+
+    pub fn from_file(path: &str) -> Option<Self> {
+        println!("reading configuration from file: {path}");
+
+        let raw = fs::read(&path)
+            .inspect_err(|err| println!("failed to read from {path}: {err}"))
+            .ok()?;
+
+        let configuration = String::from_utf8(raw)
+            .inspect_err(|err| println!("failed to parse content of {path}: {err}"))
+            .ok()?;
+
+        let mut lines = configuration.lines();
+        let username = lines.next();
+        let password = lines.next();
+        let result = Self::validate_and_assemble(username, password)
+            .inspect_err(|err| println!("invalid configuration: {err}"))
+            .ok()?;
+
+        Some(result)
+    }
+
+    pub fn from_args() -> Option<Self> {
+        println!("reading configuration from arguments");
+
+        let args = std::env::args();
+
+        let path = args
+            .skip(1) // skip executable path
+            .last()
+            .ok_or("at least 1 argument is required")
+            .inspect_err(|err| println!("no configuration file specified: {err}"))
+            .ok()?;
+
+        Self::from_file(&path)
+    }
+}
+
+fn main() {
+    let config = Config::from_args()
+        .or_else(Config::from_env)
+        .or_else(|| Config::from_file("/etc/hust-network-login.conf"))
+        .or_else(|| Config::from_file("/etc/hust-network-login/config"))
+        .expect("no available configuration found");
+
     loop {
-        match login(&username, &password) {
+        match login(&config.username, &config.password) {
             Ok(_) => {
                 println!("login ok. awaiting...");
                 thread::sleep(Duration::from_secs(15));
